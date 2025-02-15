@@ -13,6 +13,15 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v2
 
+      - name: 📂 Vérifier la présence du fichier labels.yml
+        run: |
+          if [ ! -f .github/config/labels.yml ]; then
+            echo "❌ labels.yml n'existe pas !"
+            exit 1
+          else
+            echo "✅ labels.yml trouvé !"
+          fi
+
       - name: Lister tous les repos et appliquer les labels
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
@@ -28,10 +37,10 @@ jobs:
             exit 1
           fi
 
-          # Appliquer les labels sur chaque repository
+          # Appliquer les labels sur chaque repository en utilisant labels.yml
           echo "$REPOS" | while read -r repo; do
             echo "📌 Mise à jour des labels pour $repo"
             gh api repos/$repo/labels \
               --method PUT \
-              --input .github/config/labels.json
+              --input .github/config/labels.yml
           done
