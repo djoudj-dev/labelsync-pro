@@ -13,7 +13,7 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v2
 
-      - name: Lister tous les repos de l'utilisateur et appliquer les labels
+      - name: Lister tous les repos et appliquer les labels
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
         run: |
@@ -22,11 +22,16 @@ jobs:
           # Récupérer tous les repositories de l'utilisateur
           REPOS=$(gh api user/repos --paginate --jq '.[].full_name')
 
+          # Vérifier si la liste des repos est vide
+          if [ -z "$REPOS" ]; then
+            echo "❌ Aucun repository trouvé !"
+            exit 1
+          fi
+
           # Appliquer les labels sur chaque repository
-          for repo in $REPOS; do
+          echo "$REPOS" | while read -r repo; do
             echo "📌 Mise à jour des labels pour $repo"
             gh api repos/$repo/labels \
               --method PUT \
-              --input .github/config/labels.json \
-              --auth $LABELGITHUB_TOKEN
+              --input .github/config/labels.json
           done
