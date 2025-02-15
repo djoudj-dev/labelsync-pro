@@ -36,7 +36,7 @@ jobs:
 
           cat repos_list.txt
 
-      - name: ⚡ Optimisation : Ne supprimer que les labels obsolètes et ajouter les nouveaux
+      - name: ⚡ Ne supprimer que les labels obsolètes et ajouter les nouveaux
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
         run: |
