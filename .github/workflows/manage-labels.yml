@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "🔍 Début du traitement des repositories..."
 
-          while read -r repo; do
+          while IFS= read -r repo; do
             if [[ "$repo" == "djoudj-dev/.gitworkflow" ]]; then
               echo "⚠️ Ignoré : $repo (repository privé)"
               continue
@@ -50,11 +50,11 @@ jobs:
 
             echo "📌 Vérification du repository $repo"
 
-            if gh api repos/$repo --silent; then
+            if gh api repos/"$repo" --silent; then
               echo "✅ Récupération des labels actuels de $repo..."
               
               # Obtenir la liste des labels existants
-              EXISTING_LABELS=$(GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api repos/$repo/labels --jq '.[].name' | tr -d '"')
+              EXISTING_LABELS=$(gh api repos/"$repo"/labels --jq '.[].name' | tr -d '"')
 
               # Obtenir la liste des labels définis dans labels.json
               NEW_LABELS=$(jq -r '.[].name' .github/config/labels.json)
@@ -63,28 +63,28 @@ jobs:
               LABELS_TO_DELETE=$(comm -23 <(echo "$EXISTING_LABELS" | sort) <(echo "$NEW_LABELS" | sort))
 
               # Supprimer les labels obsolètes un par un
-              echo "$LABELS_TO_DELETE" | while read -r label; do
+              echo "$LABELS_TO_DELETE" | while IFS= read -r label; do
                 if [ -n "$label" ]; then
                   echo "🗑️ Suppression du label : $label"
-                  GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api -X DELETE repos/$repo/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
+                  gh api -X DELETE repos/"$repo"/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
                 fi
               done
 
               echo "✅ Ajout des nouveaux labels pour $repo"
 
               # Ajouter les nouveaux labels un par un
-              jq -c '.[]' .github/config/labels.json | while read -r label; do
+              jq -c '.[]' .github/config/labels.json | while IFS= read -r label; do
                 NAME=$(echo "$label" | jq -r ".name")
                 DESCRIPTION=$(echo "$label" | jq -r ".description")
                 COLOR=$(echo "$label" | jq -r ".color")
 
                 echo "📌 Ajout du label : $NAME"
 
-                GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api -X POST repos/$repo/labels \
+                gh api -X POST repos/"$repo"/labels \
                   -H "Accept: application/vnd.github.v3+json" \
-                  --raw-field name="$NAME" \
-                  --raw-field description="$DESCRIPTION" \
-                  --raw-field color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
+                  -f name="$NAME" \
+                  -f description="$DESCRIPTION" \
+                  -f color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
               done
 
             else
