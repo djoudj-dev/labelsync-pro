@@ -62,17 +62,21 @@ jobs:
               # Trouver les labels à supprimer (ceux qui existent mais ne sont pas définis dans labels.json)
               LABELS_TO_DELETE=$(comm -23 <(echo "$EXISTING_LABELS" | sort) <(echo "$NEW_LABELS" | sort))
 
-              # Supprimer les labels obsolètes en parallèle (10 max à la fois)
-              echo "$LABELS_TO_DELETE" | xargs -P 10 -I {} gh api -X DELETE repos/$repo/labels/{}
+              # Supprimer les labels obsolètes un par un
+              echo "$LABELS_TO_DELETE" | while read -r label; do
+                if [ -n "$label" ]; then
+                  echo "🗑️ Suppression du label : $label"
+                  gh api -X DELETE repos/$repo/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
+                fi
+              done
 
               echo "✅ Ajout des nouveaux labels pour $repo"
 
-              # Ajouter les nouveaux labels en parallèle (10 max à la fois)
-              jq -c '.[]' .github/config/labels.json | xargs -P 10 -I {} bash -c '
-                LABEL={}
-                NAME=$(echo "$LABEL" | jq -r ".name")
-                DESCRIPTION=$(echo "$LABEL" | jq -r ".description")
-                COLOR=$(echo "$LABEL" | jq -r ".color")
+              # Ajouter les nouveaux labels un par un
+              jq -c '.[]' .github/config/labels.json | while read -r label; do
+                NAME=$(echo "$label" | jq -r ".name")
+                DESCRIPTION=$(echo "$label" | jq -r ".description")
+                COLOR=$(echo "$label" | jq -r ".color")
 
                 echo "📌 Ajout du label : $NAME"
 
@@ -81,7 +85,7 @@ jobs:
                   --raw-field name="$NAME" \
                   --raw-field description="$DESCRIPTION" \
                   --raw-field color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
-              '
+              done
 
             else
               echo "⚠️ Le repo $repo est inaccessible. Il sera ignoré."
