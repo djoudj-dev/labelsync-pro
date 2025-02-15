@@ -22,25 +22,37 @@ jobs:
             echo "✅ labels.yml trouvé !"
           fi
 
-      - name: Lister tous les repos et appliquer les labels
+      - name: 🔍 Vérifier si le token accède aux repositories
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
         run: |
           echo "🔍 Récupération de la liste des repositories..."
-          
-          # Récupérer tous les repositories de l'utilisateur
-          REPOS=$(gh api user/repos --paginate --jq '.[].full_name')
+          gh api user/repos --paginate --jq '.[].full_name' > repos_list.txt
+          cat repos_list.txt || echo "❌ Erreur : Impossible de récupérer les repositories"
 
-          # Vérifier si la liste des repos est vide
-          if [ -z "$REPOS" ]; then
-            echo "❌ Aucun repository trouvé !"
-            exit 1
-          fi
+      - name: Lister tous les repos et appliquer les labels
+        env:
+          GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
+        run: |
+          echo "🔍 Début du traitement des repositories..."
 
-          # Appliquer les labels sur chaque repository en utilisant labels.yml
-          echo "$REPOS" | while read -r repo; do
-            echo "📌 Mise à jour des labels pour $repo"
-            gh api repos/$repo/labels \
-              --method PUT \
-              --input .github/config/labels.yml
-          done
+          # Lire les repositories récupérés
+          while read -r repo; do
+            # Ignorer le repo privé `.gitworkflow`
+            if [[ "$repo" == "djoudj-dev/.gitworkflow" ]]; then
+              echo "⚠️ Ignoré : $repo (repository privé)"
+              continue
+            fi
+
+            echo "📌 Vérification du repository $repo"
+
+            # Vérifier si le repo est accessible avant d'envoyer la requête
+            if gh api repos/$repo --silent; then
+              echo "✅ Mise à jour des labels pour $repo"
+              gh api -X POST repos/$repo/labels \
+                -H "Accept: application/vnd.github.v3+json" \
+                --input .github/config/labels.yml
+            else
+              echo "⚠️ Le repo $repo est inaccessible. Il sera ignoré."
+            fi
+          done < repos_list.txt
