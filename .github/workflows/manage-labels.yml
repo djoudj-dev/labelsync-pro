@@ -28,5 +28,5 @@ jobs:
             gh api repos/$repo/labels \
               --method PUT \
               --input .github/config/labels.json \
-              --auth $GH_TOKEN
+              --auth $LABELGITHUB_TOKEN
           done
