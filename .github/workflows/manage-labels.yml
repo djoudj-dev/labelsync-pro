@@ -28,7 +28,13 @@ jobs:
         run: |
           echo "🔍 Récupération de la liste des repositories..."
           gh api user/repos --paginate --jq '.[].full_name' > repos_list.txt
-          cat repos_list.txt || echo "❌ Erreur : Impossible de récupérer les repositories"
+
+          if [ ! -s repos_list.txt ]; then
+            echo "❌ Aucun repository trouvé !"
+            exit 1
+          fi
+
+          cat repos_list.txt
 
       - name: Lister tous les repos et appliquer les labels
         env:
@@ -36,7 +42,6 @@ jobs:
         run: |
           echo "🔍 Début du traitement des repositories..."
 
-          # Lire les repositories récupérés
           while read -r repo; do
             # Ignorer le repo privé `.gitworkflow`
             if [[ "$repo" == "djoudj-dev/.gitworkflow" ]]; then
@@ -48,7 +53,16 @@ jobs:
 
             # Vérifier si le repo est accessible avant d'envoyer la requête
             if gh api repos/$repo --silent; then
-              echo "✅ Mise à jour des labels pour $repo"
+              echo "✅ Suppression des anciens labels pour $repo"
+
+              # Récupérer et supprimer tous les labels existants
+              gh api repos/$repo/labels --jq '.[].name' | tr -d '"' | while read -r label; do
+                echo "🗑️ Suppression du label : $label"
+                gh api -X DELETE repos/$repo/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
+                sleep 1  # Pause pour éviter de dépasser la limite API GitHub
+              done
+
+              echo "✅ Ajout des nouveaux labels pour $repo"
 
               # Lire et ajouter les labels un par un depuis le fichier JSON
               jq -c '.[]' .github/config/labels.json | while read -r label; do
@@ -63,6 +77,8 @@ jobs:
                   -f name="$NAME" \
                   -f description="$DESCRIPTION" \
                   -f color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
+
+                sleep 1  # Pause pour éviter de dépasser la limite API GitHub
               done
             else
               echo "⚠️ Le repo $repo est inaccessible. Il sera ignoré."
