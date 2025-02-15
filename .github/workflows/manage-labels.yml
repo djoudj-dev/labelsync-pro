@@ -1,0 +1,22 @@
+name: "Synchronisation des Labels"
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Synchronize labels
+        uses: julbme/gh-action-manage-label@v1
+        with:
+          from: .github/config/labels.yml
+          skip_delete: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
