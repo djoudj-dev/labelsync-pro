@@ -42,7 +42,6 @@ jobs:
         run: |
           echo "🔍 Début du traitement des repositories..."
 
-          # Lire les repositories récupérés
           while read -r repo; do
             if [[ "$repo" == "djoudj-dev/.gitworkflow" ]]; then
               echo "⚠️ Ignoré : $repo (repository privé)"
