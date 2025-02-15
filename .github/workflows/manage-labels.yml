@@ -54,7 +54,7 @@ jobs:
               echo "✅ Récupération des labels actuels de $repo..."
               
               # Obtenir la liste des labels existants
-              EXISTING_LABELS=$(gh api repos/$repo/labels --jq '.[].name' | tr -d '"')
+              EXISTING_LABELS=$(GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api repos/$repo/labels --jq '.[].name' | tr -d '"')
 
               # Obtenir la liste des labels définis dans labels.json
               NEW_LABELS=$(jq -r '.[].name' .github/config/labels.json)
@@ -66,7 +66,7 @@ jobs:
               echo "$LABELS_TO_DELETE" | while read -r label; do
                 if [ -n "$label" ]; then
                   echo "🗑️ Suppression du label : $label"
-                  gh api -X DELETE repos/$repo/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
+                  GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api -X DELETE repos/$repo/labels/"$label" || echo "⚠️ Impossible de supprimer $label"
                 fi
               done
 
@@ -80,7 +80,7 @@ jobs:
 
                 echo "📌 Ajout du label : $NAME"
 
-                gh api -X POST repos/$repo/labels \
+                GH_TOKEN=${{ secrets.LABELGITHUB_TOKEN }} gh api -X POST repos/$repo/labels \
                   -H "Accept: application/vnd.github.v3+json" \
                   --raw-field name="$NAME" \
                   --raw-field description="$DESCRIPTION" \
