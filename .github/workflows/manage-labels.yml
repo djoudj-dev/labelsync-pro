@@ -49,9 +49,21 @@ jobs:
             # Vérifier si le repo est accessible avant d'envoyer la requête
             if gh api repos/$repo --silent; then
               echo "✅ Mise à jour des labels pour $repo"
-              gh api -X POST repos/$repo/labels \
-                -H "Accept: application/vnd.github.v3+json" \
-                --input .github/config/labels.yml
+
+              # Lire et ajouter les labels un par un
+              yq eval '.labels[]' .github/config/labels.yml | while read -r label; do
+                NAME=$(echo "$label" | yq eval '.name' -)
+                DESCRIPTION=$(echo "$label" | yq eval '.description' -)
+                COLOR=$(echo "$label" | yq eval '.color' -)
+
+                echo "📌 Ajout du label : $NAME"
+
+                gh api -X POST repos/$repo/labels \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  -f name="$NAME" \
+                  -f description="$DESCRIPTION" \
+                  -f color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
+              done
             else
               echo "⚠️ Le repo $repo est inaccessible. Il sera ignoré."
             fi
