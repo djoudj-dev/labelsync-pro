@@ -1,22 +1,32 @@
-name: "Synchronisation des Labels"
+name: "Synchronisation des Labels sur Tous les Repos"
 
 on:
-  push:
-    branches:
-      - master
+  schedule:
+    - cron: "0 0 * * 1"  # Exécute chaque lundi à minuit
   workflow_dispatch:
 
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v2
 
-      - name: Synchronize labels
-        uses: julbme/gh-action-manage-label@v1
-        with:
-          from: .github/config/labels.yml
-          skip_delete: false
+      - name: Lister tous les repos de l'utilisateur et appliquer les labels
         env:
-          GITHUB_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
+        run: |
+          echo "🔍 Récupération de la liste des repositories..."
+          
+          # Récupérer tous les repositories de l'utilisateur
+          REPOS=$(gh api user/repos --paginate --jq '.[].full_name')
+
+          # Appliquer les labels sur chaque repository
+          for repo in $REPOS; do
+            echo "📌 Mise à jour des labels pour $repo"
+            gh api repos/$repo/labels \
+              --method PUT \
+              --input .github/config/labels.json \
+              --auth $GH_TOKEN
+          done
