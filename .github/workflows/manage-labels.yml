@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "15 19 * * *"  # Exécute chaque jour à 19h
   workflow_dispatch:
+  repository_dispatch:
+    types: [refresh]
 
 jobs:
   sync-labels:
