@@ -1,4 +1,4 @@
-name: "Synchronisation des Labels sur Tous les Repos"
+name: "Synchronisation des Labels sur le Dernier Repo Créé"
 
 on:
   schedule:
@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: 📂 Vérifier la présence du fichier labels.json
         run: |
@@ -24,25 +24,29 @@ jobs:
             echo "✅ labels.json trouvé !"
           fi
 
-      - name: 🔍 Vérifier si le token accède aux repositories
+      - name: 🔍 Vérifier si le token accède aux repositories et récupérer le dernier repo créé
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
         run: |
-          echo "🔍 Récupération de la liste des repositories..."
-          gh api user/repos --paginate --jq '.[].full_name' > repos_list.txt
+          echo "🔍 Récupération du dernier repository créé..."
+          # Récupérer les repos triés par date de création (le plus récent en premier)
+          gh api user/repos --paginate --jq 'sort_by(-.created_at) | .[].full_name' > repos_list.txt
 
           if [ ! -s repos_list.txt ]; then
             echo "❌ Aucun repository trouvé !"
             exit 1
           fi
 
-          cat repos_list.txt
+          # Prendre uniquement le premier repo (le plus récent)
+          head -n 1 repos_list.txt > latest_repo.txt
+          echo "✅ Dernier repository créé :"
+          cat latest_repo.txt
 
-      - name: ⚡ Ne supprimer que les labels obsolètes et ajouter les nouveaux
+      - name: ⚡ Ne traiter que le dernier repository créé
         env:
           GH_TOKEN: ${{ secrets.LABELGITHUB_TOKEN }}
         run: |
-          echo "🔍 Début du traitement des repositories..."
+          echo "🔍 Début du traitement du dernier repository créé..."
 
           while IFS= read -r repo; do
             if [[ "$repo" == "djoudj-dev/.gitworkflow" ]]; then
@@ -54,12 +58,22 @@ jobs:
 
             if gh api repos/"$repo" --silent; then
               echo "✅ Récupération des labels actuels de $repo..."
-              
+
               # Obtenir la liste des labels existants
               EXISTING_LABELS=$(gh api repos/"$repo"/labels --jq '.[].name' | tr -d '"')
 
               # Obtenir la liste des labels définis dans labels.json
               NEW_LABELS=$(jq -r '.[].name' .github/config/labels.json)
+
+              # Vérifier si tous les labels requis sont déjà présents
+              MISSING_LABELS=$(comm -23 <(echo "$NEW_LABELS" | sort) <(echo "$EXISTING_LABELS" | sort))
+
+              if [ -z "$MISSING_LABELS" ]; then
+                echo "✅ Le repository $repo possède déjà tous les labels requis. Aucune action nécessaire."
+                continue
+              fi
+
+              echo "🔍 Des labels sont manquants, mise à jour du repository..."
 
               # Trouver les labels à supprimer (ceux qui existent mais ne sont pas définis dans labels.json)
               LABELS_TO_DELETE=$(comm -23 <(echo "$EXISTING_LABELS" | sort) <(echo "$NEW_LABELS" | sort))
@@ -80,16 +94,20 @@ jobs:
                 DESCRIPTION=$(echo "$label" | jq -r ".description")
                 COLOR=$(echo "$label" | jq -r ".color")
 
-                echo "📌 Ajout du label : $NAME"
-
-                gh api -X POST repos/"$repo"/labels \
-                  -H "Accept: application/vnd.github.v3+json" \
-                  -f name="$NAME" \
-                  -f description="$DESCRIPTION" \
-                  -f color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
+                # Vérifier si le label existe déjà
+                if echo "$EXISTING_LABELS" | grep -q "^$NAME$"; then
+                  echo "⏩ Label déjà existant : $NAME"
+                else
+                  echo "📌 Ajout du label : $NAME"
+                  gh api -X POST repos/"$repo"/labels \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    -f name="$NAME" \
+                    -f description="$DESCRIPTION" \
+                    -f color="$COLOR" || echo "⚠️ Impossible d'ajouter $NAME"
+                fi
               done
 
             else
               echo "⚠️ Le repo $repo est inaccessible. Il sera ignoré."
             fi
-          done < repos_list.txt
+          done < latest_repo.txt
