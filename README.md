@@ -2,7 +2,7 @@
 
 ## Description
 
-`.gitworkflow` est un outil d'automatisation GitHub qui synchronise un ensemble standardisé d'étiquettes (labels) sur vos repositories GitHub. Il est conçu pour maintenir une cohérence visuelle et fonctionnelle à travers tous vos projets en appliquant automatiquement un ensemble prédéfini d'étiquettes au dernier repository créé.
+`labelsync-pro` est un outil d'automatisation GitHub qui synchronise un ensemble standardisé d'étiquettes (labels) sur vos repositories GitHub. Il est conçu pour maintenir une cohérence visuelle et fonctionnelle à travers tous vos projets en appliquant automatiquement un ensemble prédéfini d'étiquettes au dernier repository créé.
 
 ## Fonctionnalités
 
@@ -30,7 +30,7 @@ Le workflow inclut un ensemble complet d'étiquettes prédéfinies pour différe
 
 1. **Cloner ce repository** :
    ```bash
-   git clone https://github.com/votre-username/.gitworkflow.git
+   git clone https://github.com/djoudj-dev/labelsync-pro.git
    ```
 
 2. **Configurer le token GitHub** :
