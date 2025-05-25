@@ -30,7 +30,7 @@ jobs:
         run: |
           echo "🔍 Récupération du dernier repository créé..."
           # Récupérer les repos triés par date de création (le plus récent en premier)
-          gh api user/repos --paginate --jq 'sort_by(-.created_at) | .[].full_name' > repos_list.txt
+          gh api user/repos --paginate --jq 'sort_by(.created_at | fromdateiso8601) | reverse | .[].full_name' > repos_list.txt
 
           if [ ! -s repos_list.txt ]; then
             echo "❌ Aucun repository trouvé !"
