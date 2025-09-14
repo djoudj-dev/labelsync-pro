@@ -1,5 +1,10 @@
 # **LabelSync Pro**
 
+``` Aperçu des labels ```
+
+![Capture d'écran LabelSync Pro 1](screenshot/label_1.png)
+
+
 ## Description
 
 `labelsync-pro` est un outil d'automatisation GitHub qui synchronise un ensemble standardisé d'étiquettes (labels) sur vos repositories GitHub. Il est conçu pour maintenir une cohérence visuelle et fonctionnelle à travers tous vos projets en appliquant automatiquement un ensemble prédéfini d'étiquettes au dernier repository créé.
